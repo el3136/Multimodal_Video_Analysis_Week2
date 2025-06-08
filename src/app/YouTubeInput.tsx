@@ -22,13 +22,16 @@ declare global {
 }
 
 export function YouTubeInput() {
+  // for video topic summary
   const [videoUrl, setVideoUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
+  // for chat
   const [transcript, setTranscript] = useState<any[]>([]);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  // for video player
   const [videoId, setVideoId] = useState("");
   const playerRef = useRef<any>(null);
 
@@ -78,6 +81,7 @@ export function YouTubeInput() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
+      // extract video id from url
       const id = extractVideoId(videoUrl);
       if (!id) {
         throw new Error("Invalid YouTube URL");
@@ -161,19 +165,19 @@ export function YouTubeInput() {
         >
           {isLoading ? "Analyzing" : "Analyze Video"}
         </button>
-
+        {/* loading spinner */}
         {isLoading && (
           <div className="flex justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-blue-600" />
           </div>
         )}
-
+        {/* video player */}
         {videoId && (
           <div className="mt-4 aspect-video w-full overflow-hidden rounded-lg">
             <div id="youtube-player" className="w-full h-full" />
           </div>
         )}
-
+        {/* video topics timeline */}
         {topics.length > 0 && (
           <div className="mt-4 p-4 bg-zinc-900 rounded-lg">
             <h3 className="text-lg font-semibold text-zinc-300 mb-2">
@@ -194,7 +198,8 @@ export function YouTubeInput() {
             </div>
           </div>
         )}
-
+        
+        {/* Ask Questions About the Video */}
         {transcript.length > 0 && (
           <div className="mt-8 space-y-4">
             <h3 className="text-lg font-semibold text-zinc-300">
