@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { env } from "@/app/config/env";
+// import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { env } from "@/app/config/env";
 import { getGeminiResponse } from "@/utils/geminiClient";
 
 interface TranscriptEntry {
@@ -29,9 +29,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const genAI = new GoogleGenerativeAI(env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     // Create a structured prompt for the chat
     const chatPrompt = `You are a helpful assistant analyzing a video transcript. Answer the user's question based on the transcript below.
@@ -62,6 +59,7 @@ export async function POST(request: NextRequest) {
     6. Make sure your response is valid JSON`;
 
     // Get chat response
+    // This uses Google Gemini API
     const result = await getGeminiResponse([
       {
         "role": "user",
@@ -107,7 +105,7 @@ export async function POST(request: NextRequest) {
         try {
           const citations = JSON.parse(citationsMatch[1]);
           if (Array.isArray(citations)) {
-            fallbackResponse.citations = citations.map((citation: any) => ({
+            fallbackResponse.citations = citations.map((citation: Citation) => ({
               timestamp: citation.timestamp || "00:00",
               text: citation.text || ""
             }));

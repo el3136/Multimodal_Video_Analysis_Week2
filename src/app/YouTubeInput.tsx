@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 interface Topic {
   timestamp: string;
@@ -23,10 +24,36 @@ interface VisualSearchResult {
   frameUrl: string;
 }
 
+interface TranscriptEntry {
+  timestamp: string;
+  text: string;
+}
+
+interface YouTubePlayerOptions {
+  videoId: string;
+  playerVars: {
+    autoplay: number;
+    modestbranding: number;
+    rel: number;
+  };
+  events: {
+    onReady: (event: YouTubePlayerEvent) => void;
+  };
+}
+
+interface YouTubePlayerEvent {
+  target: YouTubePlayer;
+}
+
+interface YouTubePlayer {
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  destroy: () => void;
+}
+
 declare global {
   interface Window {
     YT: {
-      Player: new (elementId: string, options: any) => any;
+      Player: new (elementId: string, options: YouTubePlayerOptions) => YouTubePlayer;
       PlayerState: {
         PLAYING: number;
         PAUSED: number;
@@ -43,7 +70,7 @@ export function YouTubeInput() {
   const [isLoading, setIsLoading] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   // for chat
-  const [transcript, setTranscript] = useState<any[]>([]);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<ChatResponse | null>(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -52,7 +79,7 @@ export function YouTubeInput() {
   const [visualQuery, setVisualQuery] = useState("");
   const [isVisualSearchLoading, setIsVisualSearchLoading] = useState(false);
   const [visualSearchResults, setVisualSearchResults] = useState<VisualSearchResult[]>([]);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
 
   useEffect(() => {
     if (!videoId) return;
@@ -77,7 +104,7 @@ export function YouTubeInput() {
           rel: 0,
         },
         events: {
-          onReady: (event: any) => {
+          onReady: () => {
             console.log("Player is ready");
           },
         },
@@ -364,10 +391,12 @@ export function YouTubeInput() {
                         </div>
                         {result.frameUrl && (
                           <div className="relative aspect-video w-full overflow-hidden rounded-lg">
-                            <img 
+                            <Image 
                               src={result.frameUrl} 
                               alt="Video frame" 
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             />
                           </div>
                         )}

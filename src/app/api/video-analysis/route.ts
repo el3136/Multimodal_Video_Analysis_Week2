@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { env } from "@/app/config/env";
+// import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { env } from "@/app/config/env";
 import { YoutubeTranscript } from 'youtube-transcript';
 import { getGeminiResponse } from "@/utils/geminiClient";
 
@@ -50,9 +50,6 @@ export async function POST(request: NextRequest) {
 
     console.log("Formatted transcript:", formattedTranscript);
 
-    const genAI = new GoogleGenerativeAI(env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
     // First, analyze the transcript to find topic changes
     const analysisPrompt = `You are a video content analyzer. Your task is to identify the main topics in this video transcript.
 
@@ -82,6 +79,7 @@ export async function POST(request: NextRequest) {
     console.log("Analysis Prompt", analysisPrompt);
 
     // Get topics analysis
+    // This uses Google Gemini API
     const topicsResult = await getGeminiResponse([
       {
         "role": "user",
