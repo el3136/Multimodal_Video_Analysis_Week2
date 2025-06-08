@@ -138,12 +138,27 @@ export function YouTubeInput() {
         method: "POST",
         body: JSON.stringify({ videoUrl }),
       });
+      
       const data = await response.json();
       console.log("Received video analysis data:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze video");
+      }
+
+      if (!data.topics || !data.transcript) {
+        throw new Error("Invalid response format from server");
+      }
+
       setTopics(data.topics);
       setTranscript(data.transcript);
     } catch (error) {
       console.error("Analysis error:", error);
+      // Reset states on error
+      setTopics([]);
+      setTranscript([]);
+      // You might want to show an error message to the user here
+      alert(error instanceof Error ? error.message : "Failed to analyze video");
     }
     setIsLoading(false);
   };
