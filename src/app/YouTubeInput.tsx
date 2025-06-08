@@ -112,6 +112,7 @@ export function YouTubeInput() {
         body: JSON.stringify({ videoUrl }),
       });
       const data = await response.json();
+      console.log("Received video analysis data:", data);
       setTopics(data.topics);
       setTranscript(data.transcript);
     } catch (error) {
@@ -133,6 +134,10 @@ export function YouTubeInput() {
       setAnswer(data);
     } catch (error) {
       console.error("Chat error:", error);
+      setAnswer({
+        answer: "I apologize, but I'm having trouble processing your question right now. Please try again.",
+        citations: []
+      });
     }
     setIsChatLoading(false);
   };
@@ -160,6 +165,8 @@ export function YouTubeInput() {
   const handleTimestampClick = (timestamp: string) => {
     if (!playerRef.current) return;
 
+    console.log("Handling timestamp click:", timestamp);
+
     // Convert timestamp to seconds
     const parts = timestamp.split(':').map(Number);
     let totalSeconds = 0;
@@ -172,15 +179,19 @@ export function YouTubeInput() {
       totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
     }
 
+    console.log(`Seeking to ${totalSeconds} seconds (timestamp: ${timestamp})`);
+    
     // Seek to the timestamp
     playerRef.current.seekTo(totalSeconds, true);
   };
 
-  const formatAnswer = (answer: string) => {
-    // Replace [timestamp] with clickable buttons
-    return answer.split(/(\[\d{2}:\d{2}(?::\d{2})?\])/).map((part, index) => {
-      if (part.match(/\[\d{2}:\d{2}(?::\d{2})?\]/)) {
-        const timestamp = part.slice(1, -1); // Remove brackets
+  const formatAnswer = (answer: string | undefined) => {
+    if (!answer) return "I apologize, but I'm having trouble processing your question right now. Please try again.";
+    
+    // Replace ["timestamp"] with clickable buttons
+    return answer.split(/(\[\"\d{2}:\d{2}(?::\d{2})?\"\])/).map((part, index) => {
+      if (part.match(/\[\"\d{2}:\d{2}(?::\d{2})?\"\]/)) {
+        const timestamp = part.slice(2, -2); // Remove [" and "]
         return (
           <button
             key={index}
