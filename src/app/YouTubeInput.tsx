@@ -7,6 +7,22 @@ interface Topic {
   topic: string;
 }
 
+interface Citation {
+  timestamp: string;
+  text: string;
+}
+
+interface ChatResponse {
+  answer: string;
+  citations: Citation[];
+}
+
+interface VisualSearchResult {
+  timestamp: string;
+  description: string;
+  frameUrl: string;
+}
+
 declare global {
   interface Window {
     YT: {
@@ -29,10 +45,13 @@ export function YouTubeInput() {
   // for chat
   const [transcript, setTranscript] = useState<any[]>([]);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState<ChatResponse | null>(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
   // for video player
   const [videoId, setVideoId] = useState("");
+  const [visualQuery, setVisualQuery] = useState("");
+  const [isVisualSearchLoading, setIsVisualSearchLoading] = useState(false);
+  const [visualSearchResults, setVisualSearchResults] = useState<VisualSearchResult[]>([]);
   const playerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -111,11 +130,31 @@ export function YouTubeInput() {
         body: JSON.stringify({ question, transcript }),
       });
       const data = await response.json();
-      setAnswer(data.answer);
+      setAnswer(data);
     } catch (error) {
       console.error("Chat error:", error);
     }
     setIsChatLoading(false);
+  };
+
+  const handleVisualSearch = async () => {
+    if (!visualQuery.trim() || !videoId) return;
+    
+    setIsVisualSearchLoading(true);
+    try {
+      const response = await fetch("/api/visual-search", {
+        method: "POST",
+        body: JSON.stringify({ 
+          query: visualQuery,
+          videoId: videoId
+        }),
+      });
+      const data = await response.json();
+      setVisualSearchResults(data.results);
+    } catch (error) {
+      console.error("Visual search error:", error);
+    }
+    setIsVisualSearchLoading(false);
   };
 
   const handleTimestampClick = (timestamp: string) => {
@@ -135,6 +174,25 @@ export function YouTubeInput() {
 
     // Seek to the timestamp
     playerRef.current.seekTo(totalSeconds, true);
+  };
+
+  const formatAnswer = (answer: string) => {
+    // Replace [timestamp] with clickable buttons
+    return answer.split(/(\[\d{2}:\d{2}(?::\d{2})?\])/).map((part, index) => {
+      if (part.match(/\[\d{2}:\d{2}(?::\d{2})?\]/)) {
+        const timestamp = part.slice(1, -1); // Remove brackets
+        return (
+          <button
+            key={index}
+            onClick={() => handleTimestampClick(timestamp)}
+            className="text-blue-400 hover:text-blue-300 underline"
+          >
+            {part}
+          </button>
+        );
+      }
+      return part;
+    });
   };
 
   return (
@@ -201,52 +259,113 @@ export function YouTubeInput() {
         
         {/* Ask Questions About the Video */}
         {transcript.length > 0 && (
-          <div className="mt-8 space-y-4">
-            <h3 className="text-lg font-semibold text-zinc-300">
-              Ask Questions About the Video
-            </h3>
+          <div className="mt-8 space-y-8">
+            {/* Chat Section */}
             <div className="space-y-4">
-              <input
-                type="text"
-                value={question}
-                onChange={e => setQuestion(e.target.value)}
-                placeholder="Ask a question about the video..."
-                className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              <button
-                type="button"
-                disabled={!question.trim() || isChatLoading}
-                onClick={handleChat}
-                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
-              >
-                {isChatLoading ? "Thinking..." : "Ask Question"}
-              </button>
+              <h3 className="text-lg font-semibold text-zinc-300">
+                Ask Questions About the Video
+              </h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={question}
+                  onChange={e => setQuestion(e.target.value)}
+                  placeholder="Ask a question about the video..."
+                  className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  disabled={!question.trim() || isChatLoading}
+                  onClick={handleChat}
+                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
+                >
+                  {isChatLoading ? "Thinking..." : "Ask Question"}
+                </button>
+              </div>
+
+              {answer && (
+                <div className="mt-4 p-4 bg-zinc-900 rounded-lg">
+                  <h4 className="text-sm font-medium text-zinc-300 mb-2">Answer:</h4>
+                  <div className="space-y-4">
+                    <div className="text-zinc-400">
+                      {formatAnswer(answer.answer)}
+                    </div>
+                    {answer.citations && answer.citations.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-zinc-800">
+                        <h5 className="text-sm font-medium text-zinc-300 mb-2">Citations:</h5>
+                        <div className="space-y-2">
+                          {answer.citations.map((citation, index) => (
+                            <div key={index} className="text-sm text-zinc-400">
+                              <button
+                                onClick={() => handleTimestampClick(citation.timestamp)}
+                                className="text-blue-400 hover:text-blue-300 underline mr-2"
+                              >
+                                [{citation.timestamp}]
+                              </button>
+                              {citation.text}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {answer && (
-              <div className="mt-4 p-4 bg-zinc-900 rounded-lg">
-                <h4 className="text-sm font-medium text-zinc-300 mb-2">Answer:</h4>
-                <div className="space-y-2">
-                  {(() => {
-                    try {
-                      const parsedAnswer = JSON.parse(answer);
-                      if (Array.isArray(parsedAnswer)) {
-                        return parsedAnswer.map((item, index) => (
-                          <div key={index} className="text-zinc-400">
-                            {item.answer}
-                          </div>
-                        ));
-                      } else if (typeof parsedAnswer === 'object' && parsedAnswer.answer) {
-                        return <div className="text-zinc-400">{parsedAnswer.answer}</div>;
-                      }
-                      return <div className="text-zinc-400">{answer}</div>;
-                    } catch {
-                      return <div className="text-zinc-400">{answer}</div>;
-                    }
-                  })()}
-                </div>
+            {/* Visual Search Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-zinc-300">
+                Visual Search
+              </h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={visualQuery}
+                  onChange={e => setVisualQuery(e.target.value)}
+                  placeholder="Describe what you're looking for in the video..."
+                  className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  disabled={!visualQuery.trim() || isVisualSearchLoading}
+                  onClick={handleVisualSearch}
+                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
+                >
+                  {isVisualSearchLoading ? "Searching..." : "Search Video"}
+                </button>
               </div>
-            )}
+
+              {visualSearchResults && visualSearchResults.length > 0 && (
+                <div className="mt-4 p-4 bg-zinc-900 rounded-lg">
+                  <h4 className="text-sm font-medium text-zinc-300 mb-2">Search Results:</h4>
+                  <div className="space-y-4">
+                    {visualSearchResults.map((result, index) => (
+                      <div key={index} className="space-y-3">
+                        <div className="flex items-start gap-3 text-sm">
+                          <button
+                            onClick={() => handleTimestampClick(result.timestamp)}
+                            className="min-w-[60px] px-2 py-1 bg-zinc-800 rounded text-zinc-300 font-mono hover:bg-zinc-700 transition-colors"
+                          >
+                            {result.timestamp}
+                          </button>
+                          <span className="text-zinc-400">{result.description}</span>
+                        </div>
+                        {result.frameUrl && (
+                          <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                            <img 
+                              src={result.frameUrl} 
+                              alt="Video frame" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

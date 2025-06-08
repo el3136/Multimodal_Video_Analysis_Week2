@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = `You are a helpful assistant that answers questions about a video transcript. 
-    Please answer the following question based on the transcript provided:
+    Please answer the following question based on the transcript provided.
+    When referencing specific parts of the video, include the timestamp in the format [MM:SS] or [HH:MM:SS].
+    Make sure to include relevant timestamps as citations for your answer.
 
     Question: ${question}
 
@@ -23,7 +25,17 @@ export async function POST(request: NextRequest) {
     </VideoTranscript>
 
     Please provide a clear and concise answer. If the answer is not found in the transcript, 
-    please say so. If you can provide timestamps for relevant parts of the transcript, please include them.`;
+    please say so. Always include timestamps as citations when referencing specific parts of the video.
+    Format your response as a JSON object with the following structure:
+    {
+      "answer": "Your answer with [timestamp] citations",
+      "citations": [
+        {
+          "timestamp": "MM:SS or HH:MM:SS",
+          "text": "The relevant text from the transcript"
+        }
+      ]
+    }`;
 
     const result = await getGeminiResponse([
       {
@@ -32,7 +44,7 @@ export async function POST(request: NextRequest) {
       },
     ]);
 
-    return NextResponse.json({ answer: result }, { status: 200 });
+    return NextResponse.json(JSON.parse(result), { status: 200 });
   } catch (error) {
     console.error("Video chat error:", error);
     return NextResponse.json(
