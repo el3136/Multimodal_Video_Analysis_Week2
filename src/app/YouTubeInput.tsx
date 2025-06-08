@@ -226,7 +226,25 @@ export function YouTubeInput() {
             {answer && (
               <div className="mt-4 p-4 bg-zinc-900 rounded-lg">
                 <h4 className="text-sm font-medium text-zinc-300 mb-2">Answer:</h4>
-                <p className="text-zinc-400 whitespace-pre-wrap">{answer}</p>
+                <div className="space-y-2">
+                  {(() => {
+                    try {
+                      const parsedAnswer = JSON.parse(answer);
+                      if (Array.isArray(parsedAnswer)) {
+                        return parsedAnswer.map((item, index) => (
+                          <div key={index} className="text-zinc-400">
+                            {item.answer}
+                          </div>
+                        ));
+                      } else if (typeof parsedAnswer === 'object' && parsedAnswer.answer) {
+                        return <div className="text-zinc-400">{parsedAnswer.answer}</div>;
+                      }
+                      return <div className="text-zinc-400">{answer}</div>;
+                    } catch {
+                      return <div className="text-zinc-400">{answer}</div>;
+                    }
+                  })()}
+                </div>
               </div>
             )}
           </div>
