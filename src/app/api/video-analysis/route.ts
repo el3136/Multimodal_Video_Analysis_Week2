@@ -61,7 +61,11 @@ export async function POST(request: NextRequest) {
     // - AI/ML analysis
     // - Database operations
 
-    return NextResponse.json(result, { status: 200 });
+    // Return both the topics and the transcript
+    return NextResponse.json({
+      topics: JSON.parse(result).topics,
+      transcript: transcript
+    }, { status: 200 });
   } catch (error) {
     console.error("Video analysis error:", error);
 
